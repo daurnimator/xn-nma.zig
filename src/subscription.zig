@@ -15,7 +15,7 @@ fn hash(out: []u8, Ki: usize, in: []const u8) void {
 }
 
 pub const Subscription = packed struct {
-    filter: BloomFilter(2048, 3, bool, std.builtin.endian, hash) = .{},
+    filter: BloomFilter(2048, 3, bool, std.Target.current.cpu.arch.endian(), hash) = .{},
 
     const Self = @This();
 };
@@ -27,8 +27,8 @@ comptime {
 test " " {
     var s = Subscription{};
     s.filter.add("foo");
-    testing.expect(s.filter.contains("foo"));
-    testing.expect(!s.filter.contains("bar"));
+    try testing.expect(s.filter.contains("foo"));
+    try testing.expect(!s.filter.contains("bar"));
 }
 
 const MessageStore = struct {
@@ -246,8 +246,8 @@ test "sqlite" {
         const a3 = sqlite.Blob{ .data = std.mem.asBytes(&m.hash()) };
         try db.exec(
             \\ insert into known_message(channel_id, message_id, message_hash) values
-            //\\   ('0123456789abcdef','123456','abcdef'),
             \\   (?, ?, ?);
+            //\\   ('0123456789abcdef','123456','abcdef'),
         , .{
             a1, a2, a3,
         });

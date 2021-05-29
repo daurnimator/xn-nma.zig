@@ -37,31 +37,31 @@ pub fn read(comptime T: type, reader: anytype) !T {
 test "read" {
     {
         var reader = std.io.fixedBufferStream("\x7f");
-        std.testing.expectEqual(@as(u8, 0x7f), try read(u8, reader.reader()));
+        try std.testing.expectEqual(@as(u8, 0x7f), try read(u8, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\x80\x00");
-        std.testing.expectEqual(@as(u8, 0x80), try read(u8, reader.reader()));
+        try std.testing.expectEqual(@as(u8, 0x80), try read(u8, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\x80\x7f");
-        std.testing.expectEqual(@as(u8, 0xff), try read(u8, reader.reader()));
+        try std.testing.expectEqual(@as(u8, 0xff), try read(u8, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\x81\x7f");
-        std.testing.expectEqual(@as(u9, 0x17f), try read(u9, reader.reader()));
+        try std.testing.expectEqual(@as(u9, 0x17f), try read(u9, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\xff\x7f");
-        std.testing.expectEqual(@as(u15, 16511), try read(u15, reader.reader()));
+        try std.testing.expectEqual(@as(u15, 16511), try read(u15, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\x80\x80\x00");
-        std.testing.expectEqual(@as(u15, 16512), try read(u15, reader.reader()));
+        try std.testing.expectEqual(@as(u15, 16512), try read(u15, reader.reader()));
     }
     {
         var reader = std.io.fixedBufferStream("\xff\xff\x7f");
-        std.testing.expectEqual(@as(u22, 2113663), try read(u22, reader.reader()));
+        try std.testing.expectEqual(@as(u22, 2113663), try read(u22, reader.reader()));
     }
 }
 
@@ -89,49 +89,49 @@ test "write" {
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u8, 0x7f));
-        std.testing.expectEqualSlices(u8, "\x7f", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\x7f", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u8, 0x80));
-        std.testing.expectEqualSlices(u8, "\x80\x00", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\x80\x00", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u8, 0xff));
-        std.testing.expectEqualSlices(u8, "\x80\x7f", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\x80\x7f", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u9, 0x17f));
-        std.testing.expectEqualSlices(u8, "\x81\x7f", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\x81\x7f", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u15, 16511));
-        std.testing.expectEqualSlices(u8, "\xff\x7f", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\xff\x7f", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u15, 16512));
-        std.testing.expectEqualSlices(u8, "\x80\x80\x00", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\x80\x80\x00", fbs.getWritten());
     }
     {
         var buffer: [4]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buffer);
 
         try write(fbs.writer(), @as(u22, 2113663));
-        std.testing.expectEqualSlices(u8, "\xff\xff\x7f", fbs.getWritten());
+        try std.testing.expectEqualSlices(u8, "\xff\xff\x7f", fbs.getWritten());
     }
 }
 
@@ -148,11 +148,11 @@ pub fn size(uint_value: anytype) usize {
 }
 
 test "size" {
-    std.testing.expectEqual(@as(usize, 1), size(@as(u8, 0x7f)));
-    std.testing.expectEqual(@as(usize, 2), size(@as(u8, 0x80)));
-    std.testing.expectEqual(@as(usize, 2), size(@as(u8, 0xff)));
-    std.testing.expectEqual(@as(usize, 2), size(@as(u9, 0x17f)));
-    std.testing.expectEqual(@as(usize, 2), size(@as(u15, 16511)));
-    std.testing.expectEqual(@as(usize, 3), size(@as(u15, 16512)));
-    std.testing.expectEqual(@as(usize, 3), size(@as(u22, 2113663)));
+    try std.testing.expectEqual(@as(usize, 1), size(@as(u8, 0x7f)));
+    try std.testing.expectEqual(@as(usize, 2), size(@as(u8, 0x80)));
+    try std.testing.expectEqual(@as(usize, 2), size(@as(u8, 0xff)));
+    try std.testing.expectEqual(@as(usize, 2), size(@as(u9, 0x17f)));
+    try std.testing.expectEqual(@as(usize, 2), size(@as(u15, 16511)));
+    try std.testing.expectEqual(@as(usize, 3), size(@as(u15, 16512)));
+    try std.testing.expectEqual(@as(usize, 3), size(@as(u22, 2113663)));
 }

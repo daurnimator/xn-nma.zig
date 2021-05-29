@@ -246,12 +246,12 @@ test "Envelope with 1 parent" {
     try e.sign(key_pair);
 
     // verify construction is as intended
-    testing.expectEqual(first_in_reply_to, e.first_in_reply_to);
+    try testing.expectEqual(first_in_reply_to, e.first_in_reply_to);
     {
         var it = e.iterateReplyTo(MessageId.initInt(1));
-        testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
+        try testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
     }
-    testing.expectEqualSlices(u8, &payload, e.getPayloadSlice());
+    try testing.expectEqualSlices(u8, &payload, e.getPayloadSlice());
     try e.verify(key_pair.public_key);
 }
 
@@ -274,13 +274,13 @@ test "Envelope with 2 parents" {
     try e.sign(key_pair);
 
     // verify construction is as intended
-    testing.expectEqual(first_in_reply_to, e.first_in_reply_to);
+    try testing.expectEqual(first_in_reply_to, e.first_in_reply_to);
     {
         var it = e.iterateReplyTo(id);
-        testing.expectEqual(second_in_reply_to, (try it.next()).?);
-        testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
+        try testing.expectEqual(second_in_reply_to, (try it.next()).?);
+        try testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
     }
-    testing.expectEqualSlices(u8, &payload, e.getPayloadSlice());
+    try testing.expectEqualSlices(u8, &payload, e.getPayloadSlice());
     try e.verify(key_pair.public_key);
 }
 
@@ -347,21 +347,21 @@ test "Message" {
     };
 
     { // verify construction is as intended
-        testing.expectEqual(MessageIdHash.calculate(channel_id, message_id), m.id_hash);
+        try testing.expectEqual(MessageIdHash.calculate(channel_id, message_id), m.id_hash);
         var e2 = try m.decrypt(channel_id, message_id);
-        testing.expectEqual(first_in_reply_to, e2.first_in_reply_to);
+        try testing.expectEqual(first_in_reply_to, e2.first_in_reply_to);
         {
             var it = e2.iterateReplyTo(MessageId.initInt(1));
-            testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
+            try testing.expectEqual(@as(?IntraChannelReference, null), try it.next());
         }
-        testing.expectEqualSlices(u8, &payload, e2.getPayloadSlice());
+        try testing.expectEqualSlices(u8, &payload, e2.getPayloadSlice());
         try e2.verify(key_pair.public_key);
     }
 
     { // check invalid construction fails
         const wrong_message_id = message_id.next();
-        testing.expect(!std.meta.eql(MessageIdHash.calculate(channel_id, wrong_message_id), m.id_hash));
-        testing.expectError(error.AuthenticationFailed, m.decrypt(channel_id, wrong_message_id));
+        try testing.expect(!std.meta.eql(MessageIdHash.calculate(channel_id, wrong_message_id), m.id_hash));
+        try testing.expectError(error.AuthenticationFailed, m.decrypt(channel_id, wrong_message_id));
     }
 }
 
