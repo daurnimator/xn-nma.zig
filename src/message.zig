@@ -84,11 +84,19 @@ const IntraChannelReference = extern struct {
 
 const InReplyTo = IntraChannelReference;
 
+const PayloadType = enum(u2) {
+    authorization,
+    payload,
+    encrypted_payload,
+    _,
+};
+
 pub const Envelope = extern struct {
     /// Workaround Zig packed struct bugs
     workaround: packed struct {
         continuation: bool,
-        padding: u6 = 0,
+        payload_type: PayloadType,
+        padding: u4 = 0,
         n_in_reply_to_bytes: u9,
     },
     authorization: IntraChannelReference,
@@ -115,6 +123,7 @@ pub const Envelope = extern struct {
         return Self{
             .workaround = .{
                 .continuation = false,
+                .payload_type = .payload, // TODO: arg?
                 .n_in_reply_to_bytes = 0,
             },
             .authorization = authorization,
