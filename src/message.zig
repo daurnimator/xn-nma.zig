@@ -91,6 +91,105 @@ const PayloadType = enum(u2) {
     _,
 };
 
+const Conditions = enum(u32) {
+    ttl,
+    _,
+};
+
+const Condition = union(Conditions) {
+    pub fn check(
+        self: @This(),
+        context: Authorization,
+        candidate: Envelope,
+        candidate_message_id: MessageId,
+    ) bool {
+        const activeTag = std.meta.activeTag(self);
+        inline for (std.meta.fields(@This())) |field_info| {
+            if (@field(Conditions, field_info.name) == activeTag) {
+                return @field(self, field_info.name).check(context, candidate, candidate_message_id);
+            }
+        }
+        unreachable;
+    }
+
+    ttl: struct {
+        ttl: u48,
+
+        pub fn check(
+            self: @This(),
+            context: Authorization,
+            candidate: Envelope,
+            candidate_message_id: MessageId,
+        ) bool {
+            return candidate_message_id.asInt() <= (context.message_id.asInt() + self.ttl);
+        }
+    },
+};
+
+pub const Authorization = struct {
+    slice: []u8,
+    message_id: MessageId,
+
+    const Self = @This();
+
+    pub fn authorizes(self: Self, candidate: Envelope, message_id: MessageId) !bool {
+        const public_key = self.slice[0..Ed25519.public_length];
+        candidate.verify(public_key.*) catch return false;
+
+        var stack: [@sizeOf(Condition) * (Envelope.varying_space - Ed25519.public_length) / "{\"a\":1}".len]u8 = undefined;
+        var fba = std.heap.FixedBufferAllocator.init(&stack);
+
+        var tokens = std.json.TokenStream.init(self.slice[Ed25519.public_length..]);
+        const json_options = std.json.ParseOptions{
+            .allocator = &fba.allocator,
+            .allow_trailing_data = true,
+        };
+        const conditions = try std.json.parse([]Condition, &tokens, json_options);
+        defer std.json.parseFree([]Condition, conditions, json_options);
+
+        const unused = self.slice[Ed25519.public_length + tokens.i ..];
+        if (!std.mem.allEqual(u8, unused, 0)) return error.InvalidPadding;
+
+        for (conditions) |c| {
+            if (!c.check(self, candidate, message_id)) return false;
+        }
+        return true;
+    }
+};
+
+test "parse Authorization" {
+    const key_pair = try Ed25519.KeyPair.create(null);
+
+    var e = Envelope.init(undefined, MessageHash{ .hash = "abcdef1234567890".* });
+    std.mem.copy(u8, e.getPayloadSlice(), &[_]u8{0} ** 378);
+    try e.sign(key_pair);
+
+    {
+        const slice = try std.mem.concat(testing.allocator, u8, &[_][]const u8{ &key_pair.public_key, "[]trailing junk" });
+        defer testing.allocator.free(slice);
+        const a = Authorization{ .slice = slice, .message_id = undefined };
+        try testing.expectError(error.InvalidPadding, a.authorizes(e, undefined));
+    }
+    {
+        const slice = try std.mem.concat(testing.allocator, u8, &[_][]const u8{ &key_pair.public_key, "[]" });
+        defer testing.allocator.free(slice);
+        const a = Authorization{ .slice = slice, .message_id = MessageId.initInt(1) };
+        try testing.expect(try a.authorizes(e, undefined));
+    }
+    {
+        const slice = try std.mem.concat(testing.allocator, u8, &[_][]const u8{ &key_pair.public_key, "[{\"ttl\":1}]" });
+        defer testing.allocator.free(slice);
+        const a = Authorization{ .slice = slice, .message_id = MessageId.initInt(1) };
+        try testing.expect(try a.authorizes(e, MessageId.initInt(2)));
+    }
+    {
+        const slice = try std.mem.concat(testing.allocator, u8, &[_][]const u8{ &key_pair.public_key, "[{\"ttl\":1}]" });
+        defer testing.allocator.free(slice);
+        const a = Authorization{ .slice = slice, .message_id = MessageId.initInt(1) };
+        try testing.expect(!try a.authorizes(e, MessageId.initInt(4)));
+    }
+}
+
 pub const Envelope = extern struct {
     /// Workaround Zig packed struct bugs
     workaround: packed struct {
